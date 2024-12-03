@@ -13,27 +13,12 @@ const SelectLayout = () => {
     selectedAnalysis,
     setDataAnalysis,
     setIsLoadingData,
-    setDataAnalysisDelivered,
     searchQuery,
     currentPage,
+    setSearchQuery,
   } = useContext(AuthContext) as AuthContextType;
 
   const debouncedSearchValue = useDebounce(searchQuery, 1000);
-
-  const ongoingControllerRef = useRef<AbortController | null>(null);
-  const deliveredControllerRef = useRef<AbortController | null>(null);
-
-  //   searchValue?: string
-  // ) => {
-  //   try {
-  //     const response = await axiosInstanceV2.get(
-  //       api.getDataLogisticAllVoicesOngoingV2(currentPage, searchValue)
-  //     );
-  //     return response.data;
-  //   } catch (error) {
-  //     return { error: "Failed to fetch data" };
-  //   }
-  // };
 
   const fetchDataLogistic = async (
     currentPage?: number,
@@ -76,7 +61,7 @@ const SelectLayout = () => {
   const handleButtonClick = async (value: string) => {
     setSelectedAnalysis(value);
     setDataAnalysis({}); // Xóa dữ liệu cũ trước khi tải dữ liệu mới
-
+    setSearchQuery(""); // Xóa dữ liệu search trước khi tải dữ liệu mới
     // Bắt đầu trạng thái loading
     if (value === "On Going") {
       setIsLoadingData(isLoadingOngoing);
