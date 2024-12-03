@@ -145,7 +145,12 @@ const HomeLeftComponent = () => {
     queryFn: ({ signal }) =>
       fetchDataComponents(selectedProjectCode, selectedYear, signal),
     refetchOnWindowFocus: false,
-    enabled: !!auth && !!selectedProjectCode && !!selectedYear,
+    enabled:
+      !!selectedProjectCode &&
+      selectedProjectCode.trim() !== "" &&
+      !!selectedYear &&
+      selectedYear.trim() !== "",
+    initialData: [],
   });
 
   // Set Select year
