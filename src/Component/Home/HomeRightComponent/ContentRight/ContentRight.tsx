@@ -67,7 +67,7 @@ const ContentRight = () => {
   useEffect(() => {
     if (dataAnalysis?.founds) {
       const projectCode = dataAnalysis?.founds
-        .map((item: object) => item["project_code"])
+        .map((item: any) => item["project_code"])
         .filter(
           (item: any, i: any, ar: string | any[]) => ar.indexOf(item) === i
         )
@@ -150,9 +150,9 @@ const ContentRight = () => {
 
       // Gọi lại dữ liệu mới
       // refetchDataList();
-      queryClient.invalidateQueries(["dataLogisticOngoing"]);
-      queryClient.invalidateQueries(["dataLogisticDelivered"]);
 
+      queryClient.invalidateQueries({ queryKey: ["dataLogisticDelivered"] });
+      queryClient.invalidateQueries({ queryKey: ["dataLogisticOngoing"] });
       // Thông báo kết quả thành công nếu cần
       // showToast("Invoice deleted successfully!", "success");
     } catch (error: unknown) {

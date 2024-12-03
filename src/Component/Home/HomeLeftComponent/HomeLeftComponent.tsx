@@ -23,6 +23,11 @@ const override: CSSProperties = {
   fontSize: "50px",
 };
 
+interface FoundItem {
+  year: string;
+  projects: any[];
+}
+
 interface InputData {
   serial_no: string;
   additional_component: string;
@@ -145,9 +150,9 @@ const HomeLeftComponent = () => {
 
   // Set Select year
   useEffect(() => {
-    if (dataTotalProduct?.founds) {
+    if (dataTotalProduct) {
       const years = dataTotalProduct?.founds
-        .map((item: object) => item["year"])
+        .map((item: any) => item.year)
         .filter(
           (item: any, i: any, ar: string | any[]) => ar.indexOf(item) === i
         );
@@ -162,9 +167,7 @@ const HomeLeftComponent = () => {
     if (dataTotalProduct?.founds) {
       const projects = dataTotalProduct?.founds
         .filter((item: any) => item["year"] === selectedYear)
-        .map((item: string) =>
-          item["projects"].map((a: any) => a["project_code"])
-        )
+        .map((item: any) => item["projects"].map((a: any) => a["project_code"]))
         .flat();
 
       projects.sort((a: string, b: string) => {
