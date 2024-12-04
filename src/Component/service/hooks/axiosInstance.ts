@@ -1,6 +1,4 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
-import { useContext } from "react";
-import AuthContext from "../../context/AuthProvider";
 
 const BASE_URL = "https://ec2api.deltatech-backend.com/api/v1";
 const BASE_URLV2 = "https://ec2api.deltatech-backend.com/api/v2";
@@ -28,8 +26,6 @@ const axiosInstanceV2 = axios.create({
 const getAccessToken = (): string | null => {
   return localStorage.getItem("authToken");
 };
-
-console.log({ getAccessToken: getAccessToken() });
 
 const getRefreshToken = (): string | null => {
   return localStorage.getItem("refreshToken");

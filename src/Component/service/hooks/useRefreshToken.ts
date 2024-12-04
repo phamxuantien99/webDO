@@ -1,10 +1,9 @@
-import React, { useContext } from "react";
-import AuthContext, { AuthContextType } from "../../context/AuthProvider";
 import axios from "axios";
+import { useContext } from "react";
+import AuthContext, { AuthContextType } from "../../context/AuthProvider";
 import { BASE_URL } from "../api/BaseUrl";
 
 export const getRefreshToken = () => localStorage.getItem("refreshToken");
-console.log({ first: getRefreshToken() });
 
 const UseRefreshToken = () => {
   const { setAuth } = useContext(AuthContext) as AuthContextType;
