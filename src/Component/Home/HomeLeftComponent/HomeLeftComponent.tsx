@@ -121,7 +121,7 @@ const HomeLeftComponent = () => {
     signal.addEventListener("abort", () => controller.abort());
 
     try {
-      return await axios
+      return await axiosInstance
         .get(api.getLogisticComponentByProjectCode(project_code, year), {
           signal: controller.signal,
           headers,
@@ -138,11 +138,7 @@ const HomeLeftComponent = () => {
     }
   };
 
-  const {
-    data: dataComponents,
-    isLoading: isLoadingComponents,
-    refetch: retetchComponents,
-  } = useQuery({
+  const { data: dataComponents, isLoading: isLoadingComponents } = useQuery({
     queryKey: ["dataComponents", selectedProjectCode, selectedYear],
     queryFn: ({ signal }) =>
       fetchDataComponents(selectedProjectCode, selectedYear, signal),

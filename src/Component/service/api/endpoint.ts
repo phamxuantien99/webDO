@@ -16,7 +16,7 @@ export const api = {
   getLogisticSerialNumber: `/logistic/get-serial-number`,
 
   getLogisticComponentByProjectCode: (project_code: string, year: string) =>
-    `${BASE_URL}/logistic/get-component-by-project-code?project_code=${project_code}&year=${year}`,
+    `/logistic/get-component-by-project-code?project_code=${project_code}&year=${year}`,
 
   postGenInvoice: (
     year: number,
