@@ -11,12 +11,20 @@ import {
   axiosInstance,
   axiosInstanceV2,
 } from "../../../service/hooks/axiosInstance";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useDebounce } from "../../../service/hooks/useDebounce";
 
 const override: CSSProperties = {
   display: "flex",
   margin: "300px auto",
   borderColor: "red",
+};
+
+const overrideSerial: CSSProperties = {
+  display: "flex",
+  // margin: "500px auto",
+  borderColor: "red",
+  fontSize: "50px",
 };
 
 const header = [
@@ -32,6 +40,15 @@ const header = [
   "Client Ref",
   "Remark",
 ];
+
+const ListModeOfDelivery = [
+  { value: "Self Collection", label: "Self Collection" },
+  { value: "Delta Tech", label: "Site Delivery" },
+];
+
+interface InputErrors {
+  [key: string]: boolean;
+}
 
 const ContentRight = () => {
   const {
@@ -54,28 +71,11 @@ const ContentRight = () => {
 
   const getRoleAdmin = localStorage.getItem("authUser");
 
-  const [invoiceProjectCodeOptions, setInvoiceProjectCodeOptions] = useState<
-    string[]
-  >([]);
-
   const handleSearch = (value: string) => {
     setSearchQuery(value);
   };
 
   const totalPages = Math.ceil(dataAnalysis?.search_options?.total_count / 20);
-
-  useEffect(() => {
-    if (dataAnalysis?.founds) {
-      const projectCode = dataAnalysis?.founds
-        .map((item: any) => item["project_code"])
-        .filter(
-          (item: any, i: any, ar: string | any[]) => ar.indexOf(item) === i
-        )
-        .sort();
-
-      setInvoiceProjectCodeOptions(projectCode);
-    }
-  }, [dataAnalysis?.founds]);
 
   const [updating, setUpdating] = useState<boolean>(false);
 
@@ -85,29 +85,246 @@ const ContentRight = () => {
 
   const [editDate, setEditDate] = useState<any>(new Date());
   const [idInvoice, setIdInvoice] = useState<number>(0);
+  const [updateDate, setUpdateDate] = useState<any>("");
 
   const [edit, setEdit] = useState<any>({
     contact_person: "",
     contact_number: "",
-    your_ref: "",
+    client_ref: "",
+    driver_mode: "",
+    remark: "",
+    fab_year: "",
+    project_code: "",
+    invoice_id: 0,
   });
   const defaultEdit = {
     contact_person: "",
     contact_number: "",
-    your_ref: "",
+    client_ref: "",
+    driver_mode: "",
+    remark: "",
+    fab_year: "",
+    project_code: "",
+    invoice_id: 0,
   };
+
+  const debounceSearchValue = useDebounce(edit.fab_year, 1000);
+  const [listSerialNumber, setListSerialNumber] = useState<string[]>([]);
+
+  const [selectedSerialNumber, setSelectedSerialNumber] = useState<any>([]);
+  const [selectedComponent, setSelectedComponent] = useState<any>([]);
+  const [additionalComponents, setAdditionalComponents] = useState<any>([]);
+  const [errors, setErrors] = useState<InputErrors>({});
+
+  useEffect(() => {
+    setSelectedSerialNumber([]);
+    setListSerialNumber([]);
+    setSelectedComponent([]);
+    setAdditionalComponents([]);
+  }, [debounceSearchValue]);
+
+  const getSelectedSerialNumber = (event: any) => {
+    const { value, checked } = event.target;
+
+    // Case 1 : The user checks the box
+    if (checked) {
+      setSelectedSerialNumber([...selectedSerialNumber, value]);
+    }
+    // Case 2  : The user unchecks the box
+    else {
+      setSelectedComponent(
+        selectedComponent.filter((item: any) => item.serial_no !== value)
+      );
+      setSelectedSerialNumber(
+        selectedSerialNumber.filter((item: any) => item !== value)
+      );
+      setAdditionalComponents(
+        additionalComponents.filter((item: any) => item.serial_no !== value)
+      );
+    }
+  };
+
+  // get selected component
+  const getSelectedComponent = (event: any, serial: any) => {
+    const { value, checked } = event.target;
+
+    // Case 1 : The user checks the box
+    if (checked) {
+      const valComp = [
+        ...selectedComponent,
+        { serial_no: serial, components: [value] },
+      ];
+      const payload = valComp.filter((item, index) => {
+        return valComp.indexOf(item) === index;
+      });
+      setSelectedComponent(payload);
+    }
+
+    // Case 2  : The user unchecks the box
+    else {
+      const payload = selectedComponent
+        .map((item: any) => {
+          let components = item.components;
+          if (item.serial_no === serial) {
+            components = item.components.filter((item: any) => item !== value);
+          }
+
+          return {
+            ...item,
+            components,
+          };
+        })
+        .filter((item: any) => {
+          return item.components.length > 0;
+        });
+      setSelectedComponent(payload);
+    }
+  };
+
+  // select component options other
+  const getSelectedComponents = (e: any, serial: any) => {
+    const { checked } = e.target;
+    // setIsCheckedAdditional(checked);
+    if (checked) {
+      // setIsCheckedAdditional(checked);
+      const valComp = [
+        ...additionalComponents,
+        { serial_no: serial, additional_component: "" },
+      ];
+      const payload = valComp.filter((item, index) => {
+        return valComp.indexOf(item) === index;
+      });
+      setAdditionalComponents(payload);
+    }
+
+    // Case 2  : The user unchecks the box
+    else {
+      // setIsCheckedAdditional(checked);
+      const payload = additionalComponents.filter((item: any) => {
+        return item.serial_no !== serial;
+      });
+
+      setAdditionalComponents(payload);
+    }
+  };
+
+  const getAdditionalComponents = (e: any, serial: any) => {
+    const objIndex = additionalComponents.findIndex(
+      (obj: any) => obj.serial_no === serial
+    );
+    let newArray = [...additionalComponents];
+    if (e.target.value !== "") {
+      newArray[objIndex].additional_component = e.target.value;
+    } else {
+      newArray[objIndex].additional_component = "";
+    }
+    setAdditionalComponents(newArray);
+  };
+
+  const fetchDataLogisticComponent = async (
+    invoice_id: number,
+    project_code: string,
+    year: string
+  ) => {
+    if (!year) {
+      return { error: "Year is empty" }; // Trả về lỗi nếu year rỗng
+    }
+
+    try {
+      const response = await axiosInstanceV2.get(
+        api.getComponentByProjectCodeV2(invoice_id, project_code, year)
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        alert("Please check the Year field again, the year is not correct");
+      }
+      // Có thể thêm logic sử dụng refresh token ở đây
+      return { error: "Failed to fetch data" };
+    }
+  };
+
+  const { data: dataTotalProduct, isLoading: isLoadingComponent } = useQuery({
+    queryKey: ["dataComponentV2", debounceSearchValue],
+    queryFn: () =>
+      fetchDataLogisticComponent(
+        edit.invoice_id,
+        edit.project_code,
+        debounceSearchValue
+      ),
+    refetchOnWindowFocus: false,
+    enabled: !!debounceSearchValue, // API chỉ được gọi khi edit.fab_year không phải là chuỗi rỗng
+  });
+
+  const validateOptionsSerial = () => {
+    const newErrors: InputErrors = {};
+    let hasError = false;
+    additionalComponents.forEach((additionalComponent: any) => {
+      const { serial_no, additional_component } = additionalComponent;
+      const selected = dataTotalProduct?.founds
+        .filter((sc: any) => sc.serial_no === serial_no)
+        .map((item: any) => item.available_components)
+        .flat()
+        .includes(additional_component);
+      if (!additional_component || selected) {
+        newErrors[serial_no] = true;
+        hasError = true;
+      } else {
+        newErrors[serial_no] = false;
+      }
+    });
+
+    setErrors(newErrors);
+    return !hasError;
+  };
+
+  const mergedData = Object.values(
+    selectedComponent.reduce((acc: any, currentValue: any) => {
+      if (!acc[currentValue.serial_no]) {
+        // Nếu serial_no chưa tồn tại trong accumulator, khởi tạo một đối tượng mới
+        acc[currentValue.serial_no] = {
+          serial_no: currentValue.serial_no,
+          components: [], // Khởi tạo mảng components
+        };
+      }
+
+      // Thêm components từ currentValue vào mảng components của accumulator
+      if (currentValue.components) {
+        acc[currentValue.serial_no].components.push(...currentValue.components);
+      }
+
+      return acc;
+    }, {})
+  );
+
+  useEffect(() => {
+    if (!dataTotalProduct) return;
+    const serialNumbers = dataTotalProduct?.founds?.map(
+      (item: any) => item["serial_no"]
+    );
+    setListSerialNumber(serialNumbers);
+  }, [isLoadingComponent, dataTotalProduct]);
 
   const editItem = (item: any) => {
     const dateSplit = item["created_at"].split("/");
     const date = `${dateSplit[2]}-${dateSplit[1]}-${dateSplit[0]}`;
+    setUpdateDate(date);
     setEditDate(new Date(date));
     setIdInvoice(item["invoice_id"]);
     const payload = {
       contact_person: item["contact_person"],
       contact_number: item["contact_number"],
-      your_ref: item["client_ref"],
+      client_ref: item["client_ref"],
+      driver_mode: item["driver"],
+      remark: item["remark"],
+      project_code: item["project_code"],
+      invoice_id: item["invoice_id"],
+      fab_year: "",
     };
-
+    setSelectedSerialNumber([]);
+    setListSerialNumber([]);
+    setSelectedComponent([]);
+    setAdditionalComponents([]);
     setEdit(Object.assign({}, payload));
   };
 
@@ -120,16 +337,42 @@ const ContentRight = () => {
 
   const _handleUpdateInvoice = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const payload = {
+      selected_serials: selectedSerialNumber,
+      selected_components: mergedData,
+      additional_components: additionalComponents,
+    };
+
+    if (!validateOptionsSerial()) {
+      return;
+    }
+
     setUpdating(true);
 
-    const payload = edit;
-
-    axiosInstance
-      .put(api.putBaseLogisticInvoice(idInvoice), payload)
+    axiosInstanceV2
+      .put(
+        api.updateProjectCode(
+          edit.invoice_id,
+          edit.project_code,
+          edit.fab_year,
+          edit.contact_person,
+          edit.contact_number,
+          edit.driver_mode,
+          edit.client_ref,
+          edit.remark,
+          updateDate
+        ),
+        payload, // Payload là dữ liệu cần gửi
+        {
+          headers, // Cấu hình headers
+        }
+      )
       .then((res) => {
         console.log(res);
         _handleUpdateInvoiceForm();
-        // refetchDataList();
+        queryClient.invalidateQueries({ queryKey: ["dataLogisticDelivered"] });
+        queryClient.invalidateQueries({ queryKey: ["dataLogisticOngoing"] });
       })
       .catch((e) => {
         console.log(e);
@@ -140,13 +383,15 @@ const ContentRight = () => {
   const [isLoadingDelete, setIsLoadingDelete] = useState<boolean>(false);
 
   const handleDeleteInvoice = async (id: number, project: string) => {
-    console.log({ id, project });
     setIsLoadingDelete(true);
     try {
       const response = await axiosInstanceV2.put(
-        api.deleteInvoiceProject(id, project)
+        api.deleteInvoiceProject(id, project),
+        {
+          headers,
+        }
       );
-      console.log("Delete successful:", response.data);
+      alert(response?.data?.message);
 
       // Gọi lại dữ liệu mới
       // refetchDataList();
@@ -196,17 +441,172 @@ const ContentRight = () => {
                     <DatePicker
                       className="input input-bordered w-full"
                       selected={editDate}
-                      onChange={(date) =>
+                      onChange={(date) => {
+                        const newDate = date || editDate; // Nếu không sửa, lấy giá trị từ API
                         setEdit((prev: any) => ({
                           ...prev,
-                          date: date,
-                        }))
-                      }
-                      disabled={true}
+                          date: newDate,
+                        }));
+                      }}
+                      // disabled={true}
                       placeholderText="dd/mm/yyyy"
                       dateFormat="dd/MM/yyyy"
                     />
                   </div>
+
+                  {/* Year */}
+                  <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Year
+                    </label>
+                    <input
+                      required
+                      value={edit.fab_year}
+                      onChange={(event) =>
+                        setEdit((prev: any) => ({
+                          ...prev,
+                          fab_year: event.target.value || edit.fab_year,
+                        }))
+                      }
+                      type="number"
+                      placeholder="Contact person"
+                      className="input input-bordered w-full"
+                    />
+                  </div>
+                  {/* project code */}
+                  <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Project Code
+                    </label>
+                    <input
+                      required
+                      value={edit.project_code}
+                      disabled={true}
+                      type="text"
+                      placeholder="Contact person"
+                      className="input input-bordered w-full"
+                    />
+                  </div>
+
+                  <div>
+                    {isLoadingComponent ? (
+                      <FadeLoader
+                        loading={isLoadingComponent}
+                        cssOverride={overrideSerial}
+                        color="red"
+                        aria-label="Loading Spinner"
+                        data-testid="loader"
+                      />
+                    ) : (
+                      <div>
+                        <fieldset>
+                          <legend className="block text-gray-700 text-sm font-bold mb-2">
+                            Serial Number
+                          </legend>
+                          <div>
+                            <div className="flex flex-wrap gap-3">
+                              {listSerialNumber?.map((item, index) => (
+                                <div
+                                  key={item}
+                                  className="flex items-center gap-3"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="checkbox"
+                                    name="serial"
+                                    value={item}
+                                    onChange={(event) =>
+                                      getSelectedSerialNumber(event)
+                                    }
+                                  />
+                                  <span className="label-text">{item}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </fieldset>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* component */}
+
+                  <div>
+                    {selectedSerialNumber.map(
+                      (serial: string | number, index: string) => (
+                        <fieldset key={index}>
+                          <legend className="block text-gray-700 text-sm font-bold mb-2">
+                            Components - {serial}
+                          </legend>
+                          <div>
+                            <div className="flex flex-wrap gap-3">
+                              {dataTotalProduct?.founds
+                                ?.find((item: any) => item.serial_no === serial)
+                                ?.available_components?.map(
+                                  (component: any, index: number) => (
+                                    <div
+                                      key={index}
+                                      className="flex items-center gap-3"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        className="checkbox"
+                                        id={serial.toString() + component}
+                                        name={serial.toString()}
+                                        value={component}
+                                        onChange={(event) =>
+                                          getSelectedComponent(event, serial)
+                                        }
+                                      />
+                                      <span className="label-text">
+                                        {component}
+                                      </span>
+                                    </div>
+                                  )
+                                )}
+                            </div>
+
+                            <div className="mt-2">
+                              <div className="flex items-center gap-3 mb-2">
+                                <input
+                                  type="checkbox"
+                                  className="checkbox"
+                                  onChange={(event) =>
+                                    getSelectedComponents(event, serial)
+                                  }
+                                />
+                                <span className="label-text ">
+                                  Other option
+                                </span>
+                              </div>
+                              {additionalComponents?.some(
+                                (item: any) => item.serial_no === serial
+                              ) ? (
+                                <div>
+                                  <input
+                                    type="text"
+                                    id="optionInput"
+                                    className="input input-bordered w-full"
+                                    onChange={(event) =>
+                                      getAdditionalComponents(event, serial)
+                                    }
+                                  />
+                                  {errors[serial] && (
+                                    <p className="text-red-600 mt-1 text-sm">
+                                      The value cannot the same or empty
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <div></div>
+                              )}
+                            </div>
+                          </div>
+                        </fieldset>
+                      )
+                    )}
+                  </div>
+
                   <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2">
                       Contact Person
@@ -217,7 +617,8 @@ const ContentRight = () => {
                       onChange={(event) =>
                         setEdit((prev: any) => ({
                           ...prev,
-                          contact_person: event.target.value,
+                          contact_person:
+                            event.target.value || edit.contact_person,
                         }))
                       }
                       type="text"
@@ -225,6 +626,37 @@ const ContentRight = () => {
                       className="input input-bordered w-full"
                     />
                   </div>
+
+                  {/* mode of delivery */}
+                  <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Mode of Delivery
+                    </label>
+                    <select
+                      name="selectedYeaer"
+                      value={edit.driver_mode}
+                      required
+                      onChange={(event) =>
+                        setEdit((prev: any) => ({
+                          ...prev,
+                          driver_mode: event.target.value || edit.driver_mode,
+                        }))
+                      }
+                      className="select select-bordered w-full"
+                    >
+                      <option disabled value="">
+                        Please select a Mode of Delivery
+                      </option>
+                      {ListModeOfDelivery.map((item, index) => (
+                        <option
+                          value={`${item.value}`}
+                          key={index}
+                        >{`${item.label}`}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* contact nunber */}
                   <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2">
                       Contact Number
@@ -235,7 +667,8 @@ const ContentRight = () => {
                       onChange={(event) =>
                         setEdit((prev: any) => ({
                           ...prev,
-                          contact_number: event.target.value,
+                          contact_number:
+                            event.target.value || edit.contact_number,
                         }))
                       }
                       type="text"
@@ -243,21 +676,43 @@ const ContentRight = () => {
                       className="input input-bordered w-full"
                     />
                   </div>
+
+                  {/* client ref */}
                   <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2">
                       Client Ref
                     </label>
                     <input
                       required
-                      value={edit.your_ref}
+                      value={edit.client_ref}
                       onChange={(event) =>
                         setEdit((prev: any) => ({
                           ...prev,
-                          your_ref: event.target.value,
+                          client_ref: event.target.value || edit.client_ref,
                         }))
                       }
                       type="text"
                       placeholder="Client Ref"
+                      className="input input-bordered w-full"
+                    />
+                  </div>
+
+                  {/* remark */}
+                  <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Remark
+                    </label>
+                    <input
+                      required
+                      value={edit.remark}
+                      onChange={(event) =>
+                        setEdit((prev: any) => ({
+                          ...prev,
+                          remark: event.target.value || edit.remark,
+                        }))
+                      }
+                      type="text"
+                      placeholder="Remark"
                       className="input input-bordered w-full"
                     />
                   </div>
@@ -284,7 +739,9 @@ const ContentRight = () => {
     try {
       setIsLoadingCheckbox(true); // Bật loading
       setCheckbox((prev: any) => ({ ...prev, [id]: true }));
-      await axiosInstanceV2.put(api.putTickerLogisticInvoice(id));
+      await axiosInstanceV2.put(api.putTickerLogisticInvoice(id), {
+        headers,
+      });
     } catch (error) {
       console.error(error);
       alert("Failed to update ticker, please contact administrator");

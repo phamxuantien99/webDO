@@ -16,7 +16,15 @@ const SelectLayout = () => {
     searchQuery,
     currentPage,
     setSearchQuery,
+    auth,
   } = useContext(AuthContext) as AuthContextType;
+
+  const url = auth ? `Bearer ${auth}` : "";
+  const headers = {
+    Authorization: url,
+    accept: "application/json",
+    "Content-Type": "application/json",
+  };
 
   const debouncedSearchValue = useDebounce(searchQuery, 1000);
 
@@ -27,7 +35,8 @@ const SelectLayout = () => {
   ) => {
     try {
       const response = await axiosInstanceV2.get(
-        api.getDataLogisticAllVoicesV2(currentPage, searchValue, status)
+        api.getDataLogisticAllVoicesV2(currentPage, searchValue, status),
+        { headers }
       );
       return response.data;
     } catch (error) {
@@ -44,6 +53,7 @@ const SelectLayout = () => {
     ],
     queryFn: () =>
       fetchDataLogistic(currentPage, debouncedSearchValue, "ongoing"),
+    refetchOnWindowFocus: false,
   });
 
   const { data: dataLogisticDelivered, isLoading: isLoadingDelivered } =
@@ -56,6 +66,7 @@ const SelectLayout = () => {
       ],
       queryFn: () =>
         fetchDataLogistic(currentPage, debouncedSearchValue, "delivery"),
+      refetchOnWindowFocus: false,
     });
 
   const handleButtonClick = async (value: string) => {

@@ -16,7 +16,7 @@ export const api = {
   getLogisticSerialNumber: `/logistic/get-serial-number`,
 
   getLogisticComponentByProjectCode: (project_code: string, year: string) =>
-    `/logistic/get-component-by-project-code?project_code=${project_code}&year=${year}`,
+    `${BASE_URL}/logistic/get-component-by-project-code?project_code=${project_code}&year=${year}`,
 
   postGenInvoice: (
     year: number,
@@ -79,4 +79,24 @@ export const api = {
 
   deleteInvoiceProject: (logistic_invoice_id: number, project_code: string) =>
     `/logistic/remove?invoice_id=${logistic_invoice_id}&project_code=${project_code}`,
+
+  getComponentByProjectCodeV2: (
+    invoice_id: number,
+    project_code: string,
+    year: string
+  ) =>
+    `/logistic/update/get-component-by-project-code?invoice_id=${invoice_id}&project_code=${project_code}&year=${year}`,
+
+  updateProjectCode: (
+    invoice_id: number,
+    project_code: string,
+    fab_year: string,
+    contact_person?: string,
+    contact_number?: string,
+    driver_mode?: string,
+    clien_ref?: string,
+    remark?: string,
+    issue_date?: string
+  ) =>
+    `/logistic/update_detail?invoice_id=${invoice_id}&project_code=${project_code}&fab_year=${fab_year}&contact_person=${contact_person}&contact_number=${contact_number}&driver_mode=${driver_mode}&client_ref=${clien_ref}&remark=${remark}&issue_date=${issue_date}`,
 };

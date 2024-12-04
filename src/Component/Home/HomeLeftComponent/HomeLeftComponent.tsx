@@ -9,7 +9,6 @@ import { FadeLoader } from "react-spinners";
 import AuthContext, { AuthContextType } from "../../context/AuthProvider";
 import { api } from "../../service/api/endpoint";
 import UseRefreshToken from "../../service/hooks/useRefreshToken";
-// import axiosInstance from "../../service/hooks/axiosInstance";
 import logo1 from "../../../assets/images/logo1.png";
 import {
   axiosInstance,
@@ -96,7 +95,7 @@ const HomeLeftComponent = () => {
   const fetchDataLogistic = async () => {
     try {
       return await axiosInstance
-        .get(api.getLogisticSerialNumber)
+        .get(api.getLogisticSerialNumber, { headers })
         .then((res) => res.data);
     } catch (error) {
       UseRefreshToken();
@@ -104,12 +103,14 @@ const HomeLeftComponent = () => {
     }
   };
 
-  const { data: dataTotalProduct } = useQuery({
-    queryKey: ["dataTotalProduct"],
-    queryFn: () => fetchDataLogistic(),
-    refetchOnWindowFocus: false,
-    enabled: !!auth,
-  });
+  const { data: dataTotalProduct, isLoading: isLoadingTotalProduct } = useQuery(
+    {
+      queryKey: ["dataTotalProduct"],
+      queryFn: () => fetchDataLogistic(),
+      refetchOnWindowFocus: false,
+      enabled: !!auth,
+    }
+  );
 
   const fetchDataComponents = async (
     project_code: string,
@@ -120,9 +121,10 @@ const HomeLeftComponent = () => {
     signal.addEventListener("abort", () => controller.abort());
 
     try {
-      return await axiosInstance
+      return await axios
         .get(api.getLogisticComponentByProjectCode(project_code, year), {
           signal: controller.signal,
+          headers,
         })
         .then((res) => res.data);
     } catch (error) {
@@ -145,12 +147,7 @@ const HomeLeftComponent = () => {
     queryFn: ({ signal }) =>
       fetchDataComponents(selectedProjectCode, selectedYear, signal),
     refetchOnWindowFocus: false,
-    enabled:
-      !!selectedProjectCode &&
-      selectedProjectCode.trim() !== "" &&
-      !!selectedYear &&
-      selectedYear.trim() !== "",
-    initialData: [],
+    enabled: !!selectedProjectCode && !!selectedYear,
   });
 
   // Set Select year
@@ -181,28 +178,24 @@ const HomeLeftComponent = () => {
 
       setListProjectCode(projects);
     }
+    setListSerialNumber([]);
     setSeletedProjectCode("");
     setSelectedSerialNumber([]);
     setAdditionalComponents([]);
     setSelectedComponent([]);
 
-    retetchComponents();
+    // retetchComponents();
   }, [selectedYear]);
 
-  // set Serial number
   useEffect(() => {
-    if (dataTotalProduct?.founds && selectedProjectCode && selectedYear) {
-      const filteredData = dataTotalProduct?.founds
-        .filter((found: any) => found.year === selectedYear)[0]
-        ?.projects.filter(
-          (project: any) => project.project_code === selectedProjectCode
-        )
-        .map((project: any) => project.serial_number)[0]; // map to serial_number
-      setListSerialNumber(filteredData);
-    }
+    if (!dataComponents) return;
+    const serialNumbers = dataComponents?.founds?.map(
+      (item: any) => item["serial_no"]
+    );
+    setListSerialNumber(serialNumbers);
     setAdditionalComponents([]);
     setSelectedSerialNumber([]);
-  }, [selectedProjectCode, selectedYear]);
+  }, [dataComponents, isLoadingComponents]);
 
   // get selected component
   const getSelectedComponent = (event: any, serial: any) => {
@@ -454,119 +447,113 @@ const HomeLeftComponent = () => {
               }))}
             />
           </div>
-          {selectedProjectCode && (
-            <div>
-              <fieldset>
-                <legend className="block text-gray-700 text-sm font-bold mb-2">
-                  Serial Number
-                </legend>
-                <div>
-                  <div className="flex flex-wrap gap-3">
-                    {listSerialNumber?.map((item, index) => (
-                      <div key={item} className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          className="checkbox"
-                          name="serial"
-                          value={item}
-                          onChange={(event) => getSelectedSerialNumber(event)}
-                        />
-                        <span className="label-text">{item}</span>
-                      </div>
-                    ))}
+          <div>
+            {isLoadingComponents ? (
+              <FadeLoader
+                loading={isLoadingComponents}
+                cssOverride={override}
+                color="red"
+                aria-label="Loading Spinner"
+                data-testid="loader"
+              />
+            ) : (
+              <div>
+                <fieldset>
+                  <legend className="block text-gray-700 text-sm font-bold mb-2">
+                    Serial Number
+                  </legend>
+                  <div>
+                    <div className="flex flex-wrap gap-3">
+                      {listSerialNumber?.map((item, index) => (
+                        <div key={item} className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            className="checkbox"
+                            name="serial"
+                            value={item}
+                            onChange={(event) => getSelectedSerialNumber(event)}
+                          />
+                          <span className="label-text">{item}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </fieldset>
-            </div>
-          )}
+                </fieldset>
+              </div>
+            )}
+          </div>
 
-          {selectedSerialNumber.length > 0 && (
-            <div>
-              {isLoadingComponents ? (
-                <FadeLoader
-                  loading={isLoadingComponents}
-                  cssOverride={override}
-                  color="red"
-                  aria-label="Loading Spinner"
-                  data-testid="loader"
-                />
-              ) : (
-                <div>
-                  {selectedSerialNumber.map(
-                    (serial: string | number, index: string) => (
-                      <fieldset key={index}>
-                        <legend className="block text-gray-700 text-sm font-bold mb-2">
-                          Components - {serial}
-                        </legend>
-                        <div>
-                          <div className="flex flex-wrap gap-3">
-                            {dataComponents?.founds
-                              ?.find((item: any) => item.serial_no === serial)
-                              ?.available_components?.map(
-                                (component: any, index: number) => (
-                                  <div
-                                    key={index}
-                                    className="flex items-center gap-3"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      className="checkbox"
-                                      id={serial.toString() + component}
-                                      name={serial.toString()}
-                                      value={component}
-                                      onChange={(event) =>
-                                        getSelectedComponent(event, serial)
-                                      }
-                                    />
-                                    <span className="label-text">
-                                      {component}
-                                    </span>
-                                  </div>
-                                )
-                              )}
-                          </div>
-
-                          <div className="mt-2">
-                            <div className="flex items-center gap-3 mb-2">
+          <div>
+            {selectedSerialNumber.map(
+              (serial: string | number, index: string) => (
+                <fieldset key={index}>
+                  <legend className="block text-gray-700 text-sm font-bold mb-2">
+                    Components - {serial}
+                  </legend>
+                  <div>
+                    <div className="flex flex-wrap gap-3">
+                      {dataComponents?.founds
+                        ?.find((item: any) => item.serial_no === serial)
+                        ?.available_components?.map(
+                          (component: any, index: number) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-3"
+                            >
                               <input
                                 type="checkbox"
                                 className="checkbox"
+                                id={serial.toString() + component}
+                                name={serial.toString()}
+                                value={component}
                                 onChange={(event) =>
-                                  getSelectedComponents(event, serial)
+                                  getSelectedComponent(event, serial)
                                 }
                               />
-                              <span className="label-text ">Other option</span>
+                              <span className="label-text">{component}</span>
                             </div>
-                            {additionalComponents?.some(
-                              (item: any) => item.serial_no === serial
-                            ) ? (
-                              <div>
-                                <input
-                                  type="text"
-                                  id="optionInput"
-                                  className="input input-bordered w-full"
-                                  onChange={(event) =>
-                                    getAdditionalComponents(event, serial)
-                                  }
-                                />
-                                {errors[serial] && (
-                                  <p className="text-red-600 mt-1 text-sm">
-                                    The value cannot the same or empty
-                                  </p>
-                                )}
-                              </div>
-                            ) : (
-                              <div></div>
-                            )}
-                          </div>
+                          )
+                        )}
+                    </div>
+
+                    <div className="mt-2">
+                      <div className="flex items-center gap-3 mb-2">
+                        <input
+                          type="checkbox"
+                          className="checkbox"
+                          onChange={(event) =>
+                            getSelectedComponents(event, serial)
+                          }
+                        />
+                        <span className="label-text ">Other option</span>
+                      </div>
+                      {additionalComponents?.some(
+                        (item: any) => item.serial_no === serial
+                      ) ? (
+                        <div>
+                          <input
+                            type="text"
+                            id="optionInput"
+                            className="input input-bordered w-full"
+                            onChange={(event) =>
+                              getAdditionalComponents(event, serial)
+                            }
+                          />
+                          {errors[serial] && (
+                            <p className="text-red-600 mt-1 text-sm">
+                              The value cannot the same or empty
+                            </p>
+                          )}
                         </div>
-                      </fieldset>
-                    )
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                      ) : (
+                        <div></div>
+                      )}
+                    </div>
+                  </div>
+                </fieldset>
+              )
+            )}
+          </div>
         </div>
         <div className="space-y-3">
           <div>

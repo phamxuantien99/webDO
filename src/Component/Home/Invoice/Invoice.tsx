@@ -425,8 +425,7 @@ function Invoice() {
 
                     <tr>
                       <th colSpan={2} className="text-center w-1/3">
-                        {data["client_supporter"] !== null &&
-                          data["client_supporter"]}
+                        {data["name"] !== null && data["name"]}
                       </th>
                       <th colSpan={2} className="text-center w-1/3">
                         {data["client_img"] !== null && (
@@ -460,11 +459,15 @@ function Invoice() {
                 {param === "Client" && (
                   <>
                     <tr>
-                      <td colSpan={2}>Name: {data["name"]}</td>
+                      <td colSpan={2}>Contact: {data["phone"]}</td>
                     </tr>
                     <tr>
-                      <td colSpan={2}>Contact: {data["phone"]}</td>
                       <td colSpan={2}>Email: {data["email"]}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={2}>
+                        Deltatech Personal Support: {data["client_supporter"]}
+                      </td>
                     </tr>
                   </>
                 )}
