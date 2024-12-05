@@ -84,6 +84,7 @@ const ContentRight = () => {
   };
 
   const [editDate, setEditDate] = useState<any>(new Date());
+  const [idInvoice, setIdInvoice] = useState<number>(0);
   const [updateDate, setUpdateDate] = useState<any>("");
 
   const [edit, setEdit] = useState<any>({
@@ -309,6 +310,7 @@ const ContentRight = () => {
     const date = `${dateSplit[2]}-${dateSplit[1]}-${dateSplit[0]}`;
     setUpdateDate(date);
     setEditDate(new Date(date));
+    setIdInvoice(item["invoice_id"]);
     const payload = {
       contact_person: item["contact_person"],
       contact_number: item["contact_number"],
@@ -406,22 +408,13 @@ const ContentRight = () => {
   };
 
   const renderUpdateModal = (item: any) => {
+    console.log({ item });
     return (
       <div>
         <label
-          onClick={() => {
-            if (
-              !(item["loading_sign"] !== null || item["unload_sign"] !== null)
-            ) {
-              editItem(item);
-            }
-          }}
+          onClick={() => editItem(item)}
           htmlFor="modal-edit"
-          // className={`btn modal-button btn-square btn-sm ${
-          //   item["loading_sign"] !== null || item["unload_sign"] !== null
-          //     ? "btn-disabled"
-          //     : ""
-          // }`}
+          className="btn modal-button btn-square btn-sm"
         >
           <BsPenFill size={16} />
         </label>
