@@ -411,12 +411,23 @@ const ContentRight = () => {
     return (
       <div>
         <label
-          onClick={() => editItem(item)}
+          onClick={() => {
+            if (
+              !(item["loading_sign"] !== null || item["unload_sign"] !== null)
+            ) {
+              editItem(item);
+            }
+          }}
           htmlFor="modal-edit"
-          className="btn modal-button btn-square btn-sm"
+          className={`btn modal-button btn-square btn-sm ${
+            item["loading_sign"] !== null || item["unload_sign"] !== null
+              ? "btn-disabled"
+              : ""
+          }`}
         >
           <BsPenFill size={16} />
         </label>
+
         <input type="checkbox" id="modal-edit" className="modal-toggle" />
         <div className="modal">
           <div className="modal-box relative">
