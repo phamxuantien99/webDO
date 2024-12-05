@@ -417,11 +417,11 @@ const ContentRight = () => {
             }
           }}
           htmlFor="modal-edit"
-          className={`btn modal-button btn-square btn-sm ${
-            item["loading_sign"] !== null || item["unload_sign"] !== null
-              ? "btn-disabled"
-              : ""
-          }`}
+          // className={`btn modal-button btn-square btn-sm ${
+          //   item["loading_sign"] !== null || item["unload_sign"] !== null
+          //     ? "btn-disabled"
+          //     : ""
+          // }`}
         >
           <BsPenFill size={16} />
         </label>
